@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 14px;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg font-mono text-ink antialiased min-h-screen;
+  }
+
+  a {
+    @apply no-underline;
+  }
+}
+
+@layer components {
+  .nav-logo-cursor {
+    @apply text-accent animate-blink;
+  }
+
+  .upload-zone {
+    @apply border border-dashed border-border-2 rounded bg-bg-2 text-center cursor-pointer
+           transition-colors duration-150 relative;
+  }
+
+  .upload-zone:hover,
+  .upload-zone.drag-over {
+    @apply border-accent bg-accent-dim;
+  }
+
+  .frame-card {
+    @apply bg-bg-2 border border-border rounded overflow-hidden cursor-pointer
+           transition-all duration-150 relative;
+  }
+
+  .frame-card:hover {
+    @apply border-accent -translate-y-0.5;
+  }
+
+  .frame-card.modified {
+    @apply border-green;
+  }
+
+  .frame-hover-overlay {
+    @apply absolute inset-0 opacity-0 transition-opacity duration-150
+           flex items-center justify-center backdrop-blur-sm;
+    background: rgba(12, 11, 9, 0.72);
+  }
+
+  .frame-card:hover .frame-hover-overlay {
+    @apply opacity-100;
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded font-mono text-xs
+           font-bold uppercase tracking-wide border-none cursor-pointer
+           transition-all duration-150;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-bg hover:bg-yellow-400;
+  }
+
+  .btn-primary:disabled {
+    @apply bg-ink-3 cursor-not-allowed opacity-60;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-ink-2 border border-border-2
+           hover:text-ink hover:border-ink-3 hover:bg-bg-3;
+  }
+
+  .btn-danger {
+    @apply bg-transparent text-red border border-red/30 hover:bg-red-dim hover:border-red;
+  }
+
+  .info-sep {
+    @apply w-px h-7 bg-border;
+  }
+
+  .log-entry {
+    display: grid;
+    grid-template-columns: 64px 16px 1fr;
+    @apply gap-1.5;
+  }
+}
+
+@layer utilities {
+  .log-indicator {
+    @apply w-1.5 h-1.5 rounded-full bg-green animate-pulse2;
+  }
+
+  .progress-fill-transition {
+    transition: width 0.3s ease;
+  }
+
+  .accent-border-left {
+    border-left: 2px solid theme('colors.accent.DEFAULT');
+  }
+}
