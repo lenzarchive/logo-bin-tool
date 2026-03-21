@@ -140,6 +140,10 @@ Replaces a frame and returns the patched `logo.bin`.
 - Always keep a backup of the original `logo.bin` before flashing.
 - Tested against Android 11 Unisoc firmware. Behavior on other versions may vary.
 
+## Flowchart
+
+[click me!](https://github.com/lenzarchive/logo-bin-tool/blob/main/FLOWCHART.md)
+
 ## License
 
 MIT — AlwizBA
