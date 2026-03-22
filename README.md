@@ -19,6 +19,22 @@ A web-based tool for extracting, replacing, and repacking Unisoc / Spreadtrum `l
 | Row order | Bottom-up |
 | Tested device | Unisoc SC9863A / SC7731E series |
 
+## Binary Format
+
+### File Header
+
+| Offset | Size | Type | Description |
+|--------|------|------|-------------|
+| 0x00 | 2B | `u8[2]` | Magic bytes `47 5A` ("GZ") |
+| 0x02 | 4B | `uint32 LE` | Frame count (typically 2–15) |
+| 0x06 | 18B | — | Reserved, all zeros |
+| 0x18 | 4B × N | `uint32 LE` | Compressed byte size for each frame |
+| 0x18 + (N × 4) | variable | — | Concatenated gzip-compressed BMP payloads |
+
+### Frame Payload
+
+Each frame is a standard gzip stream containing a raw 24bpp bottom-up BMP. The gzip header includes an embedded filename (`1.bmp`, `2.bmp`, …) set by the firmware packer. The decompressed BMP uses the standard 54-byte header followed by unpadded BGR pixel rows aligned to a 4-byte boundary.
+
 ## Requirements
 
 - Node.js >= 18.0.0
