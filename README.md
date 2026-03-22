@@ -162,4 +162,20 @@ Replaces a frame and returns the patched `logo.bin`.
 
 ## License
 
-MIT — AlwizBA
+This project is licensed under the **MIT License**.
+See [LICENSE](./LICENSE) for the full license text.
+
+## Disclaimer
+
+> **Use at your own risk.**
+
+This tool is provided **"as is"**, without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement.
+
+The author(s) shall **not** be held liable for any claim, damages, or other liability — whether arising from contract, tort, or otherwise — including but not limited to:
+
+- Bricked or damaged devices resulting from flashing a patched `logo.bin`
+- Data loss or corruption of firmware partitions
+- Incompatibility with specific device models or firmware versions
+- Any indirect, incidental, or consequential damages
+
+**You are solely responsible** for verifying compatibility, keeping a backup of your original `logo.bin`, and ensuring your device's logo partition is large enough before flashing. Always proceed with caution on production or personal devices.
