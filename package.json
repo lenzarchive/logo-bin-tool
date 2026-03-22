@@ -1,6 +1,6 @@
 {
   "name": "logo-bin-tool",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Web-based extract and repack tool for Unisoc logo.bin firmware images",
   "main": "server.js",
   "scripts": {

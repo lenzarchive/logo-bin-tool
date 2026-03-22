@@ -1,5 +1,10 @@
-const HEADER_SIZE = 44;
 const GZ_MAGIC = [0x47, 0x5a];
+const SIZES_OFFSET = 24;
+const SIZE_ENTRY = 4;
+
+function computeHeaderSize(frameCount) {
+  return SIZES_OFFSET + frameCount * SIZE_ENTRY;
+}
 
 function validateMagic(bytes) {
   return bytes[0] === GZ_MAGIC[0] && bytes[1] === GZ_MAGIC[1];
@@ -8,7 +13,7 @@ function validateMagic(bytes) {
 function readSizes(view, count) {
   const sizes = [];
   for (let i = 0; i < count; i++) {
-    sizes.push(view.getUint32(24 + i * 4, true));
+    sizes.push(view.getUint32(SIZES_OFFSET + i * SIZE_ENTRY, true));
   }
   return sizes;
 }
@@ -17,9 +22,18 @@ async function parseLogoBin(arrayBuffer) {
   const bytes = new Uint8Array(arrayBuffer);
   const view = new DataView(arrayBuffer);
 
-  if (!validateMagic(bytes)) throw new Error("Invalid file: expected GZ magic bytes");
+  if (!validateMagic(bytes)) throw new Error("Invalid file: expected GZ magic bytes (0x47 0x5A)");
 
   const frameCount = view.getUint32(2, true);
+  if (frameCount === 0 || frameCount > 64) {
+    throw new Error(`Unexpected frame count: ${frameCount}. File may be corrupt or unsupported.`);
+  }
+
+  const HEADER_SIZE = computeHeaderSize(frameCount);
+  if (arrayBuffer.byteLength < HEADER_SIZE) {
+    throw new Error("File too small to contain a valid header.");
+  }
+
   const sizes = readSizes(view, frameCount);
 
   let offset = HEADER_SIZE;
@@ -56,6 +70,7 @@ async function buildLogoBin(frames) {
 
   const sizes = recompressed.map((c) => c.length);
   const totalPayload = sizes.reduce((a, b) => a + b, 0);
+  const HEADER_SIZE = computeHeaderSize(frames.length);
   const output = new Uint8Array(HEADER_SIZE + totalPayload);
   const outView = new DataView(output.buffer);
 
@@ -64,7 +79,7 @@ async function buildLogoBin(frames) {
   outView.setUint32(2, frames.length, true);
 
   for (let i = 0; i < frames.length; i++) {
-    outView.setUint32(24 + i * 4, sizes[i], true);
+    outView.setUint32(SIZES_OFFSET + i * SIZE_ENTRY, sizes[i], true);
   }
 
   let writeOffset = HEADER_SIZE;

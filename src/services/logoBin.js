@@ -5,8 +5,13 @@ const { parseBmpHeader } = require("../utils/bmp");
 const inflate = promisify(zlib.gunzip);
 const deflate = promisify(zlib.gzip);
 
-const HEADER_SIZE = 44;
 const MAGIC = Buffer.from([0x47, 0x5a]);
+const SIZES_OFFSET = 24;
+const SIZE_ENTRY = 4;
+
+function computeHeaderSize(frameCount) {
+  return SIZES_OFFSET + frameCount * SIZE_ENTRY;
+}
 
 function validateMagic(buffer) {
   return buffer[0] === MAGIC[0] && buffer[1] === MAGIC[1];
@@ -15,17 +20,26 @@ function validateMagic(buffer) {
 function readFrameSizes(buffer, count) {
   const sizes = [];
   for (let i = 0; i < count; i++) {
-    sizes.push(buffer.readUInt32LE(24 + i * 4));
+    sizes.push(buffer.readUInt32LE(SIZES_OFFSET + i * SIZE_ENTRY));
   }
   return sizes;
 }
 
 async function extractFrames(buffer) {
   if (!validateMagic(buffer)) {
-    throw new Error("Invalid logo.bin: expected GZ magic");
+    throw new Error("Invalid logo.bin: expected GZ magic bytes (0x47 0x5A)");
   }
 
   const frameCount = buffer.readUInt32LE(2);
+  if (frameCount === 0 || frameCount > 64) {
+    throw new Error(`Unexpected frame count: ${frameCount}. File may be corrupt or unsupported.`);
+  }
+
+  const HEADER_SIZE = computeHeaderSize(frameCount);
+  if (buffer.length < HEADER_SIZE) {
+    throw new Error("File too small to contain a valid header.");
+  }
+
   const compressedSizes = readFrameSizes(buffer, frameCount);
 
   let offset = HEADER_SIZE;
@@ -54,10 +68,11 @@ async function extractFrames(buffer) {
 
 async function repackFrames(originalBuffer, frameIndex, newBmpBuffer) {
   if (!validateMagic(originalBuffer)) {
-    throw new Error("Invalid logo.bin: expected GZ magic");
+    throw new Error("Invalid logo.bin: expected GZ magic bytes (0x47 0x5A)");
   }
 
   const frameCount = originalBuffer.readUInt32LE(2);
+  const HEADER_SIZE = computeHeaderSize(frameCount);
   const compressedSizes = readFrameSizes(originalBuffer, frameCount);
 
   let offset = HEADER_SIZE;
@@ -79,7 +94,7 @@ async function repackFrames(originalBuffer, frameIndex, newBmpBuffer) {
   output.writeUInt32LE(frameCount, 2);
 
   for (let i = 0; i < frameCount; i++) {
-    output.writeUInt32LE(newSizes[i], 24 + i * 4);
+    output.writeUInt32LE(newSizes[i], SIZES_OFFSET + i * SIZE_ENTRY);
   }
 
   let writeOffset = HEADER_SIZE;

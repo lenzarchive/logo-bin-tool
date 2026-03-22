@@ -1,8 +1,17 @@
 function imageToBmp(imageData, width, height, targetFileSize) {
   const rowSize = Math.ceil((width * 3) / 4) * 4;
   const pixelDataSize = rowSize * height;
-  const fileSize = targetFileSize || 54 + pixelDataSize;
+  const minFileSize = 54 + pixelDataSize;
 
+  if (targetFileSize && targetFileSize < minFileSize) {
+    throw new Error(
+      `targetFileSize (${targetFileSize}) is smaller than the minimum required ` +
+      `BMP size (${minFileSize}) for a ${width}×${height} 24bpp image. ` +
+      `The original logo.bin may be corrupt or from an unsupported variant.`
+    );
+  }
+
+  const fileSize = targetFileSize || minFileSize;
   const buffer = new ArrayBuffer(fileSize);
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);

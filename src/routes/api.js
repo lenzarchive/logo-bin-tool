@@ -9,7 +9,40 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-router.post("/extract", upload.single("bin"), async (req, res) => {
+const rateLimitMap = new Map();
+const RATE_LIMIT = 30;
+const RATE_WINDOW = 60 * 1000;
+
+function rateLimit(req, res, next) {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now - entry.windowStart > RATE_WINDOW) {
+    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return next();
+  }
+
+  entry.count++;
+  if (entry.count > RATE_LIMIT) {
+    const retryAfter = Math.ceil((RATE_WINDOW - (now - entry.windowStart)) / 1000);
+    res.set("Retry-After", retryAfter);
+    return res.status(429).json({
+      error: `Too many requests. Try again in ${retryAfter}s.`,
+    });
+  }
+
+  next();
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitMap.entries()) {
+    if (now - entry.windowStart > RATE_WINDOW) rateLimitMap.delete(ip);
+  }
+}, RATE_WINDOW);
+
+router.post("/extract", rateLimit, upload.single("bin"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
@@ -29,7 +62,7 @@ router.post("/extract", upload.single("bin"), async (req, res) => {
   }
 });
 
-router.post("/frame/:index", upload.single("bin"), async (req, res) => {
+router.post("/frame/:index", rateLimit, upload.single("bin"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
@@ -50,6 +83,7 @@ router.post("/frame/:index", upload.single("bin"), async (req, res) => {
 
 router.post(
   "/replace",
+  rateLimit,
   upload.fields([{ name: "bin" }, { name: "image" }]),
   async (req, res) => {
     try {
@@ -57,9 +91,7 @@ router.post(
       const imageFile = req.files?.["image"]?.[0];
 
       if (!binFile || !imageFile) {
-        return res
-          .status(400)
-          .json({ error: "Both bin and image files are required" });
+        return res.status(400).json({ error: "Both bin and image files are required" });
       }
 
       const frameIndex = parseInt(req.body.frameIndex, 10);
@@ -79,6 +111,15 @@ router.post(
 
       const rowSize = Math.ceil((width * 3) / 4) * 4;
       const pixelDataSize = rowSize * height;
+      const minSize = 54 + pixelDataSize;
+
+      if (decompressedSize < minSize) {
+        return res.status(400).json({
+          error: `Frame ${frameIndex} decompressedSize (${decompressedSize}) is smaller than ` +
+                 `minimum BMP size (${minSize}) for ${width}×${height}. File may be corrupt.`,
+        });
+      }
+
       const bmpBuffer = Buffer.alloc(decompressedSize);
 
       bmpBuffer[0] = 0x42;

@@ -190,34 +190,37 @@ async function downloadFrame(index) {
 }
 
 async function handleExtractAll() {
-  log("Extracting all frames as PNG...", "info");
+  log(`Extracting all ${frames.length} frames as PNG...`, "info");
 
-  for (const frame of frames) {
-    canvas.width = frame.width;
-    canvas.height = frame.height;
-    const ctx = canvas.getContext("2d");
+  const renderFrameToBlob = (frame) =>
+    new Promise((resolve, reject) => {
+      const offscreen = document.createElement("canvas");
+      offscreen.width = frame.width;
+      offscreen.height = frame.height;
+      const ctx = offscreen.getContext("2d");
 
-    const img = await new Promise((resolve) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.src = frame.url;
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0);
+        offscreen.toBlob((blob) => {
+          if (!blob) return reject(new Error(`Failed to render frame ${frame.index}`));
+          resolve(blob);
+        }, "image/png");
+      };
+      img.onerror = () => reject(new Error(`Failed to load frame ${frame.index}`));
+      img.src = frame.url;
     });
 
-    ctx.drawImage(img, 0, 0);
+  const blobs = await Promise.all(frames.map(renderFrameToBlob));
 
-    await new Promise((resolve) => {
-      canvas.toBlob((blob) => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `frame_${frame.index}.png`;
-        a.click();
-        URL.revokeObjectURL(a.href);
-        log(`Extracted frame_${frame.index}.png`, "ok");
-        resolve();
-      }, "image/png");
-    });
-
-    await new Promise((r) => setTimeout(r, 250));
+  for (let i = 0; i < blobs.length; i++) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blobs[i]);
+    a.download = `frame_${frames[i].index}.png`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    log(`Extracted frame_${frames[i].index}.png`, "ok");
+    if (i < blobs.length - 1) await new Promise((r) => setTimeout(r, 80));
   }
 }
 
